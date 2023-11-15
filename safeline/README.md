@@ -8,7 +8,7 @@
 
 Install the SafeLine helm chart with a release name `safeline`:
 ```bash
-git clone https://github.com/chaitin/SafeLine
+helm repo add jangrui https://jangrui.com/charts/ --force-update
 helm -n safeline upgrade -i safeline ./SafeLine/helm --create-namespace
 ```
 
