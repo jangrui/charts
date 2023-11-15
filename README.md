@@ -11,7 +11,7 @@ helm search repo jangrui
 
 ## Chart List
 
-- [jangrui/safeline](charts/safeline/README.md)
+- [jangrui/safeline](https://github.com/jangrui/charts/blob/main/charts/safeline/README.md)
 
 ## License
 
