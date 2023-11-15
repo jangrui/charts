@@ -1,0 +1,5 @@
+*.Zone.Identifier
+.DS_Store
+*.zip
+*.tar
+*.tgz
