@@ -115,36 +115,6 @@ database:
   maxOpenConns: 900
   podAnnotations: {}
 
-redis:
-  type: internal
-  internal:
-    serviceAccountName: ""
-    automountServiceAccountToken: false
-    image:
-      registry: ''
-      repository: redis
-      tag: 7.0.10
-    resources:
-    #  requests:
-    #    memory: 256Mi
-    #    cpu: 100m
-    nodeSelector: {}
-    tolerations: []
-    affinity: {}
-    priorityClassName:
-  external:
-    # addr: "192.168.0.2:6379"
-    addr: ""
-    sentinelMasterSet: ""
-    coreDatabaseIndex: "0"
-    jobserviceDatabaseIndex: "1"
-    registryDatabaseIndex: "2"
-    trivyAdapterIndex: "5"
-    username: ""
-    password: ""
-    existingSecret: ""
-  podAnnotations: {}
-
 management:
   image:
     registry: ''
