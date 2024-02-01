@@ -9,7 +9,7 @@
 Install the SafeLine helm chart with a release name `safeline`:
 ```bash
 helm repo add jangrui https://jangrui.com/charts/ --force-update
-helm -n safeline upgrade -i safeline ./SafeLine/helm --create-namespace
+helm -n safeline upgrade -i safeline jangrui/safeline --create-namespace
 ```
 
 ## Uninstallation
