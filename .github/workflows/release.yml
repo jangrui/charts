@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   release:
@@ -12,9 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          submodules: recursive
 
       - name: Configure Git
         run: |
@@ -24,9 +26,43 @@ jobs:
       - name: Install Helm
         uses: azure/setup-helm@v3
 
+      - name: Lint charts
+        run: |
+          set -euo pipefail
+          mapfile -t charts < <(find . -type f -path "*/chart/Chart.yaml" -print0 | xargs -0 -n1 dirname)
+          if [ ${#charts[@]} -eq 0 ]; then
+            echo "no charts found"
+            exit 0
+          fi
+          for dir in "${charts[@]}"; do
+            echo "linting $dir"
+            helm lint "$dir"
+          done
+
+      - name: Package charts
+        run: |
+          set -euo pipefail
+          mkdir -p .cr-release-packages
+          mapfile -t charts < <(find . -type f -path "*/chart/Chart.yaml" -print0 | xargs -0 -n1 dirname)
+          if [ ${#charts[@]} -eq 0 ]; then
+            echo "no charts found"
+            exit 0
+          fi
+          for dir in "${charts[@]}"; do
+            echo "packaging $dir"
+            if [ -f "$dir/Chart.yaml" ]; then
+              helm dependency update "$dir" || true
+              helm package "$dir" -d .cr-release-packages
+            else
+              echo "skip $dir: Chart.yaml not at expected path"
+            fi
+          done
+
       - name: Run chart-releaser
-        uses: helm/chart-releaser-action@v1.6.0
+        uses: helm/chart-releaser-action@v1.7.0
         with:
-          charts_dir: .
+          skip_packaging: true
+          skip_existing: true
+          packages_with_index: true
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
