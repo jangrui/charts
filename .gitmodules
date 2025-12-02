@@ -1,0 +1,3 @@
+[submodule "multicloud-exporter"]
+	path = multicloud-exporter
+	url = https://github.com/jangrui/multicloud-exporter
