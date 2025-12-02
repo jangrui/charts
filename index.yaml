@@ -3,13 +3,13 @@ entries:
   multicloud-exporter:
   - apiVersion: v2
     appVersion: v0.0.2
-    created: "2025-12-02T05:52:29.094012519Z"
+    created: "2025-12-02T07:30:15.662241336Z"
     description: Prometheus exporter for multi-cloud metrics
-    digest: b5cf0c67d059cee5f63ad6b62cf78623a6275d26bdfc461e796a81ac16bc3e0a
+    digest: 8a42417d5c75ca36492486c016ae6039a764c0ca95f3ce7880c0bdbd5b5edce8
     name: multicloud-exporter
     type: application
     urls:
-    - https://github.com/jangrui/charts/releases/download/multicloud-exporter-v0.0.2/multicloud-exporter-v0.0.2.tgz
+    - https://jangrui.github.io/charts/multicloud-exporter-v0.0.2.tgz
     version: v0.0.2
   - apiVersion: v2
     appVersion: v0.0.1
@@ -24,7 +24,7 @@ entries:
   safeline:
   - apiVersion: v1
     appVersion: 9.1.0
-    created: "2025-12-02T07:30:03.870440707Z"
+    created: "2025-12-02T07:30:15.663362573Z"
     description: A free WAF that is simple enough, easy to use, and strong enough.
       Based on the industry's leading semantic engine detection technology, it acts
       as a reverse proxy access to protect your website from hackers.
@@ -2207,4 +2207,4 @@ entries:
     urls:
     - https://github.com/jangrui/charts/releases/download/safeline-3.10.0/safeline-3.10.0.tgz
     version: 3.10.0
-generated: "2025-12-02T07:30:03.867998688Z"
+generated: "2025-12-02T07:30:15.661875713Z"
