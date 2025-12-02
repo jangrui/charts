@@ -12,6 +12,7 @@ helm search repo jangrui
 ## Chart List
 
 - [jangrui/safeline](https://github.com/jangrui/charts/blob/main/safeline/README.md)
+- [jangrui/multicloud-exporter](https://github.com/jangrui/multicloud-exporter/blob/main/chart/README.md)
 
 ## License
 
