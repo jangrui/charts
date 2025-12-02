@@ -58,11 +58,32 @@ jobs:
             fi
           done
 
+      - name: Discover packages
+        id: discover
+        run: |
+          set -euo pipefail
+          count=$(ls -1 .cr-release-packages/*.tgz 2>/dev/null | wc -l || true)
+          if [ "$count" -gt 0 ]; then
+            echo "has_packages=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_packages=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Seed initial tag if none exists
+        run: |
+          set -euo pipefail
+          git fetch --tags
+          if ! git describe --tags --abbrev=0 >/dev/null 2>&1; then
+            git tag -a v0.0.0 -m "seed tag for chart-releaser"
+            git push origin v0.0.0
+          fi
+
       - name: Run chart-releaser
+        if: steps.discover.outputs.has_packages == 'true'
         uses: helm/chart-releaser-action@v1.7.0
         with:
           skip_packaging: true
           skip_existing: true
-          packages_with_index: true
+          packages_with_index: false
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
