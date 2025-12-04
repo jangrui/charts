@@ -2,9 +2,8 @@ name: Release Charts
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:
+    tags:
+      - '*'
 
 jobs:
   release:
@@ -28,66 +27,31 @@ jobs:
         with:
           version: v3.15.2
         env:
-          GITHUB_TOKEN: ${\{ secrets.GITHUB_TOKEN \}}
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Prepare charts dir
+        run: |
+          set -euo pipefail
+          rm -rf charts
+          mkdir -p charts
+          while IFS= read -r -d '' chart_yaml; do
+            src_dir=$(dirname "$chart_yaml")
+            parent_dir=$(basename "$(dirname "$src_dir")")
+            dst_dir="charts/$parent_dir"
+            echo "syncing $src_dir -> $dst_dir"
+            rsync -a --delete "$src_dir/" "$dst_dir/"
+          done < <(find . -type f -path "*/chart/Chart.yaml" -print0)
+          echo "prepared charts:"
+          ls -la charts
 
       - name: Lint charts
         run: |
           set -euo pipefail
-          mapfile -t charts < <(find . -type f -path "*/chart/Chart.yaml" -print0 | xargs -0 -n1 dirname)
-          if [ ${#charts[@]} -eq 0 ]; then
-            echo "no charts found"
-            exit 0
-          fi
-          for dir in "${charts[@]}"; do
-            echo "linting $dir"
-            helm lint "$dir"
-          done
-
-      - name: Package charts
-        run: |
-          set -euo pipefail
-          mkdir -p .cr-release-packages
-          mapfile -t charts < <(find . -type f -path "*/chart/Chart.yaml" -print0 | xargs -0 -n1 dirname)
-          if [ ${#charts[@]} -eq 0 ]; then
-            echo "no charts found"
-            exit 0
-          fi
-          for dir in "${charts[@]}"; do
-            echo "packaging $dir"
-            if [ -f "$dir/Chart.yaml" ]; then
-              helm dependency update "$dir" || true
-              helm package "$dir" -d .cr-release-packages
-            else
-              echo "skip $dir: Chart.yaml not at expected path"
-            fi
-          done
-
-      - name: Discover packages
-        id: discover
-        run: |
-          set -euo pipefail
-          count=$(ls -1 .cr-release-packages/*.tgz 2>/dev/null | wc -l || true)
-          if [ "$count" -gt 0 ]; then
-            echo "has_packages=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_packages=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Seed initial tag if none exists
-        run: |
-          set -euo pipefail
-          git fetch --tags
-          if ! git describe --tags --abbrev=0 >/dev/null 2>&1; then
-            git tag -a v0.0.0 -m "seed tag for chart-releaser"
-            git push origin v0.0.0
-          fi
+          helm lint charts/*
 
       - name: Run chart-releaser
-        if: steps.discover.outputs.has_packages == 'true'
         uses: helm/chart-releaser-action@v1.7.0
         with:
-          skip_packaging: true
-          skip_existing: true
-          packages_with_index: false
+          charts_dir: charts
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
