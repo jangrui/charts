@@ -67,6 +67,12 @@ jobs:
           set -euo pipefail
           helm lint "${{ matrix.chart_dir }}"
 
+      - name: Seed latest_tag env
+        run: |
+          set -euo pipefail
+          val=$(git describe --tags --abbrev=0 2>/dev/null || echo none)
+          echo "latest_tag=$val" >> "$GITHUB_ENV"
+
       - name: Package chart (force for matching tag)
         env:
           TAG: ${{ github.ref_name }}
