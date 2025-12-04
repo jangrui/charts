@@ -5,11 +5,16 @@ on:
     tags:
       - '*'
 
+concurrency:
+  group: charts-release-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   discover:
     runs-on: ubuntu-latest
     outputs:
       chart_dirs: ${{ steps.charts.outputs.chart_dirs }}
+      matched_chart_dirs: ${{ steps.match.outputs.matched_chart_dirs }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,6 +38,60 @@ jobs:
           done
           json+=']'
           echo "chart_dirs=$json" >> "$GITHUB_OUTPUT"
+      - name: Validate tag matches charts
+        id: match
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          echo "Current tag: $TAG"
+          mapfile -t charts < <(find . -type f -path "*/chart/Chart.yaml" -print0 | xargs -0 -n1 dirname)
+          matched=()
+          total=${#charts[@]}
+          matched_count=0
+          skipped_count=0
+          semver_core_re='^[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z_.]+)?$'
+          for dir in "${charts[@]}"; do
+            chart_yaml="$dir/Chart.yaml"
+            name=$(grep -E '^name:' "$chart_yaml" | head -n1 | sed -E 's/^name:[[:space:]]*"?([^"[:space:]]+)"?.*/\1/')
+            version=$(grep -E '^version:' "$chart_yaml" | head -n1 | sed -E 's/^version:[[:space:]]*"?([^"[:space:]]+)"?.*/\1/')
+            norm_version=$(echo "$version" | sed -E 's/^v//')
+            expected_core="${name}-${norm_version}"
+            reason=""
+            if [ -z "$name" ]; then reason="name missing"; fi
+            if [ -z "$version" ]; then reason="${reason:+$reason; }version missing"; fi
+            if [ -n "$norm_version" ] && ! echo "$norm_version" | grep -Eq "$semver_core_re"; then reason="${reason:+$reason; }version not semantic"; fi
+            if [ -z "$reason" ]; then
+              # Determine mismatch details
+              tag_name_part=${TAG%-*}
+              tag_version_part=${TAG##*-}
+              norm_tag_version=$(echo "$tag_version_part" | sed -E 's/^v//')
+              if [ "$tag_name_part" != "$name" ]; then reason="name mismatch: tag=$tag_name_part chart=$name"; fi
+              if [ "$norm_tag_version" != "$norm_version" ]; then reason="${reason:+$reason; }version mismatch: tag=$tag_version_part chart=$version (normalized tag=$norm_tag_version chart=$norm_version)"; fi
+            fi
+            if [ -z "$reason" ]; then
+              echo "MATCH: dir=$dir name=$name version=$version"
+              matched+=("$dir")
+              matched_count=$((matched_count+1))
+            else
+              echo "SKIP: dir=$dir name=$name version=$version reason=$reason"
+              skipped_count=$((skipped_count+1))
+            fi
+          done
+          echo "Summary: matched=$matched_count skipped=$skipped_count total=$total"
+          # produce JSON for matched dirs
+          if [ "$matched_count" -eq 0 ]; then
+            echo "ERROR: no chart matched tag '$TAG'"
+            echo "matched_chart_dirs=[]" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          out='['
+          for i in "${!matched[@]}"; do
+            if [ $i -gt 0 ]; then out+=" ,"; fi
+            out+="\"${matched[$i]}\""
+          done
+          out+=']'
+          echo "matched_chart_dirs=$out" >> "$GITHUB_OUTPUT"
 
   release:
     needs: discover
@@ -41,8 +100,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      max-parallel: 1
       matrix:
-        chart_dir: ${{ fromJSON(needs.discover.outputs.chart_dirs) }}
+        chart_dir: ${{ fromJSON(needs.discover.outputs.matched_chart_dirs) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -73,18 +133,11 @@ jobs:
           val=$(git describe --tags --abbrev=0 2>/dev/null || echo none)
           echo "latest_tag=$val" >> "$GITHUB_ENV"
 
-      - name: Package chart (force for matching tag)
-        env:
-          TAG: ${{ github.ref_name }}
+      - name: Package chart
         run: |
           set -euo pipefail
           chart_dir="${{ matrix.chart_dir }}"
-          chart_name=$(basename "$(dirname "$chart_dir")")
-          echo "Current tag: $TAG; chart: $chart_name"
-          if [[ "$TAG" != "$chart_name"-* ]]; then
-            echo "Tag $TAG does not target $chart_name, skip packaging"
-            exit 0
-          fi
+          rm -rf .cr-release-packages
           mkdir -p .cr-release-packages
           helm dependency update "$chart_dir" || true
           helm package "$chart_dir" -d .cr-release-packages
