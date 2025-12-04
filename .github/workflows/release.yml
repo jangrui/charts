@@ -67,9 +67,27 @@ jobs:
           set -euo pipefail
           helm lint "${{ matrix.chart_dir }}"
 
+      - name: Package chart (force for matching tag)
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          chart_dir="${{ matrix.chart_dir }}"
+          chart_name=$(basename "$(dirname "$chart_dir")")
+          echo "Current tag: $TAG; chart: $chart_name"
+          if [[ "$TAG" != "$chart_name"-* ]]; then
+            echo "Tag $TAG does not target $chart_name, skip packaging"
+            exit 0
+          fi
+          mkdir -p .cr-release-packages
+          helm dependency update "$chart_dir" || true
+          helm package "$chart_dir" -d .cr-release-packages
+
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.7.0
         with:
           charts_dir: ${{ matrix.chart_dir }}
+          skip_packaging: true
+          skip_existing: false
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
