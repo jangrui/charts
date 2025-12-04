@@ -6,10 +6,43 @@ on:
       - '*'
 
 jobs:
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      chart_dirs: ${{ steps.charts.outputs.chart_dirs }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - name: Discover chart directories
+        id: charts
+        run: |
+          set -euo pipefail
+          mapfile -t charts < <(find . -type f -path "*/chart/Chart.yaml" -print0 | xargs -0 -n1 dirname)
+          if [ ${#charts[@]} -eq 0 ]; then
+            echo "chart_dirs=[]" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          json='['
+          for i in "${!charts[@]}"; do
+            dir="${charts[$i]}"
+            if [ $i -gt 0 ]; then json+=" ,"; fi
+            json+="\"$dir\""
+          done
+          json+=']'
+          echo "chart_dirs=$json" >> "$GITHUB_OUTPUT"
+
   release:
+    needs: discover
     permissions:
       contents: write
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        chart_dir: ${{ fromJSON(needs.discover.outputs.chart_dirs) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,29 +62,14 @@ jobs:
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
-      - name: Prepare charts dir
+      - name: Lint chart
         run: |
           set -euo pipefail
-          rm -rf charts
-          mkdir -p charts
-          while IFS= read -r -d '' chart_yaml; do
-            src_dir=$(dirname "$chart_yaml")
-            parent_dir=$(basename "$(dirname "$src_dir")")
-            dst_dir="charts/$parent_dir"
-            echo "syncing $src_dir -> $dst_dir"
-            rsync -a --delete "$src_dir/" "$dst_dir/"
-          done < <(find . -type f -path "*/chart/Chart.yaml" -print0)
-          echo "prepared charts:"
-          ls -la charts
-
-      - name: Lint charts
-        run: |
-          set -euo pipefail
-          helm lint charts/*
+          helm lint "${{ matrix.chart_dir }}"
 
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.7.0
         with:
-          charts_dir: charts
+          charts_dir: ${{ matrix.chart_dir }}
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
