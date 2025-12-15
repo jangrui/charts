@@ -2,6 +2,16 @@ apiVersion: v1
 entries:
   multicloud-exporter:
   - apiVersion: v2
+    appVersion: v0.2.4
+    created: "2025-12-15T04:13:03.854266126Z"
+    description: Prometheus exporter for multi-cloud metrics
+    digest: 697d0ace6a07611139153cf74277304f141d067e5735ebd871656c3674aca272
+    name: multicloud-exporter
+    type: application
+    urls:
+    - https://github.com/jangrui/charts/releases/download/multicloud-exporter-v0.2.4/multicloud-exporter-v0.2.4.tgz
+    version: v0.2.4
+  - apiVersion: v2
     appVersion: v0.2.3
     created: "2025-12-12T10:08:53.446593768Z"
     description: Prometheus exporter for multi-cloud metrics
@@ -2397,4 +2407,4 @@ entries:
     urls:
     - https://github.com/jangrui/charts/releases/download/safeline-3.10.0/safeline-3.10.0.tgz
     version: 3.10.0
-generated: "2025-12-12T10:08:53.446828757Z"
+generated: "2025-12-15T04:13:03.854979222Z"
