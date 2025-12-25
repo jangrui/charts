@@ -17,7 +17,7 @@ jobs:
       matched_chart_dirs: ${{ steps.match.outputs.matched_chart_dirs }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           submodules: recursive
@@ -105,7 +105,7 @@ jobs:
         chart_dir: ${{ fromJSON(needs.discover.outputs.matched_chart_dirs) }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           submodules: recursive
@@ -116,9 +116,9 @@ jobs:
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
       - name: Install Helm
-        uses: azure/setup-helm@v4.3.0
+        uses: azure/setup-helm@v4
         with:
-          version: v3.15.2
+          version: v4.0.4
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
