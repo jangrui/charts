@@ -25,7 +25,12 @@ jobs:
         id: charts
         run: |
           set -euo pipefail
-          mapfile -t charts < <(find . -type f -path "*/chart/Chart.yaml" -print0 | xargs -0 -n1 dirname)
+          chart_paths=$(find . -type f -path "*/chart/Chart.yaml" -print0 | xargs -0 -n1 dirname)
+          if [ -z "$chart_paths" ]; then
+            charts=()
+          else
+            mapfile -t charts <<< "$chart_paths"
+          fi
           if [ ${#charts[@]} -eq 0 ]; then
             echo "chart_dirs=[]" >> "$GITHUB_OUTPUT"
             exit 0
@@ -45,7 +50,12 @@ jobs:
         run: |
           set -euo pipefail
           echo "Current tag: $TAG"
-          mapfile -t charts < <(find . -type f -path "*/chart/Chart.yaml" -print0 | xargs -0 -n1 dirname)
+          chart_paths=$(find . -type f -path "*/chart/Chart.yaml" -print0 | xargs -0 -n1 dirname)
+          if [ -z "$chart_paths" ]; then
+            charts=()
+          else
+            mapfile -t charts <<< "$chart_paths"
+          fi
           matched=()
           total=${#charts[@]}
           matched_count=0
